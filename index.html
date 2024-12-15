@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>证书生成器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            margin-top: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+        .output {
+            margin-top: 30px;
+            text-align: center;
+        }
+        canvas {
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #ccc;
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>证书生成器</h1>
+        <canvas id="certificateCanvas" width="3333" height="2353"></canvas>
+        <button id="downloadTemplate">下载名单模板</button>
+        <form id="certificateForm">
+            <div class="form-group">
+                <label for="name">姓名：</label>
+                <input type="text" id="name" name="name" placeholder="请输入姓名">
+            </div>
+            <div class="form-group">
+                <label for="date">日期：</label>
+                <input type="text" id="date" name="date" placeholder="请输入日期或其他文本">
+            </div>
+            <div class="form-group">
+                <label for="file">上传Excel文件：</label>
+                <input type="file" id="file" name="file" accept=".xlsx">
+            </div>
+            <button type="submit">生成证书</button>
+        </form>
+        <div class="output" id="output"></div>
+        <button id="downloadZip" style="display: none;">下载证书</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('certificateCanvas');
+        const ctx = canvas.getContext('2d');
+        const downloadZipButton = document.getElementById('downloadZip');
+        let zipContent = null;
+
+        // 加载默认模板
+        const defaultTemplate = new Image();
+        defaultTemplate.src = 'certificate.jpg';
+        defaultTemplate.onload = function() {
+            ctx.drawImage(defaultTemplate, 0, 0, canvas.width, canvas.height);
+        };
+
+        document.getElementById('downloadTemplate').addEventListener('click', function() {
+            const workbook = XLSX.utils.book_new();
+            const worksheetData = [
+                ['姓名', '日期'], // 表头
+                ['张三', '2024年01月01日'], // 示例数据
+                ['李四', '2024年01月02日']
+            ];
+            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+            XLSX.utils.book_append_sheet(workbook, worksheet, '模板');
+            XLSX.writeFile(workbook, '证书模板.xlsx');
+        });
+
+        document.getElementById('certificateForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const date = document.getElementById('date').value;
+            const file = document.getElementById('file').files[0];
+            const output = document.getElementById('output');
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const rows = XLSX.utils.sheet_to_json(sheet);
+
+                    const zip = new JSZip();
+
+                    rows.forEach((row, index) => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(defaultTemplate, 0, 0, canvas.width, canvas.height);
+
+                        // 添加姓名
+                        ctx.font = 'bold 116px "Microsoft YaHei"';
+                        ctx.fillStyle = 'black';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(row.姓名, canvas.width / 2, 1080);
+
+                        // 添加日期/自定义文本
+                        ctx.font = 'bold 64px "Microsoft YaHei"';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(row.日期, 740, 1720);
+
+                        // 保存每张证书为图片
+                        const imageData = canvas.toDataURL('image/png');
+                        zip.file(`${row.姓名}.png`, imageData.split(',')[1], { base64: true });
+                    });
+
+                    zip.generateAsync({ type: 'blob' }).then(function(content) {
+                        zipContent = content;
+                        downloadZipButton.style.display = 'block';
+                        output.innerHTML = `<p>批量证书已生成，请点击“下载证书”按钮下载。</p>`;
+                    });
+                };
+                reader.readAsBinaryString(file);
+            } else if (name && date) {
+                // 单个生成模式
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(defaultTemplate, 0, 0, canvas.width, canvas.height);
+
+                // 添加姓名
+                ctx.font = 'bold 116px "Microsoft YaHei"';
+                ctx.fillStyle = 'black';
+                ctx.textAlign = 'center';
+                ctx.fillText(name, canvas.width / 2, 1080);
+
+                // 添加日期/自定义文本
+                ctx.font = 'bold 64px "Microsoft YaHei"';
+                ctx.textAlign = 'left';
+                ctx.fillText(date, 740, 1720);
+
+                output.innerHTML = `<p>证书已生成！您可以右键单击图片保存。</p>`;
+            } else {
+                output.innerHTML = `<p style="color: red;">请输入姓名和日期，或上传Excel文件。</p>`;
+            }
+        });
+
+        downloadZipButton.addEventListener('click', function() {
+            if (zipContent) {
+                const zipLink = document.createElement('a');
+                zipLink.href = URL.createObjectURL(zipContent);
+                zipLink.download = '批量证书.zip';
+                zipLink.click();
+            }
+        });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</body>
+</html>
