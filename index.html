@@ -68,8 +68,10 @@
     <div class="container">
         <h1>证书生成器</h1>
         <canvas id="certificateCanvas" width="3333" height="2353"></canvas>
-        <button id="downloadTemplate">下载名单模板</button>
         <form id="certificateForm">
+            <div class="form-group">
+                <button id="downloadTemplate">下载名单模板</button>
+            </div>
             <div class="form-group">
                 <label for="name">姓名：</label>
                 <input type="text" id="name" name="name" placeholder="请输入姓名">
@@ -101,7 +103,8 @@
             ctx.drawImage(defaultTemplate, 0, 0, canvas.width, canvas.height);
         };
 
-        document.getElementById('downloadTemplate').addEventListener('click', function() {
+        document.getElementById('downloadTemplate').addEventListener('click', function(event) {
+            event.preventDefault();
             const workbook = XLSX.utils.book_new();
             const worksheetData = [
                 ['姓名', '日期'], // 表头
