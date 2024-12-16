@@ -61,7 +61,6 @@
             margin: 10px auto;
             border: 1px solid #ccc;
             max-width: 100%;
-      
         }
     </style>
 </head>
@@ -81,7 +80,7 @@
                 <label for="file">上传Excel文件：</label>
                 <input type="file" id="file" name="file" accept=".xlsx">
             </div>
-	    <div class="form-group">
+            <div class="form-group">
                 <button id="downloadTemplate">下载名单模板</button>
             </div>
             <button type="submit">生成证书</button>
@@ -137,6 +136,15 @@
                     const zip = new JSZip();
 
                     rows.forEach((row, index) => {
+                        // 自动将日期数字转换为中文格式
+                        if (typeof row.日期 === 'number') {
+                            const excelDate = new Date((row.日期 - 25569) * 86400 * 1000);
+                            const year = excelDate.getFullYear();
+                            const month = excelDate.getMonth() + 1;
+                            const day = excelDate.getDate();
+                            row.日期 = `${year}年${month}月${day}日`;
+                        }
+
                         ctx.clearRect(0, 0, canvas.width, canvas.height);
                         ctx.drawImage(defaultTemplate, 0, 0, canvas.width, canvas.height);
 
@@ -148,8 +156,8 @@
 
                         // 添加日期/自定义文本
                         ctx.font = 'bold 64px "Microsoft YaHei"';
-                        ctx.textAlign = 'left';
-                        ctx.fillText(row.日期, 740, 1720);
+                        ctx.textAlign = 'center';
+                        ctx.fillText(row.日期, 1010, 1720);
 
                         // 保存每张证书为图片
                         const imageData = canvas.toDataURL('image/png');
@@ -176,8 +184,8 @@
 
                 // 添加日期/自定义文本
                 ctx.font = 'bold 64px "Microsoft YaHei"';
-                ctx.textAlign = 'left';
-                ctx.fillText(date, 740, 1720);
+                ctx.textAlign = 'center';
+                ctx.fillText(date, 1010, 1720);
 
                 output.innerHTML = `<p>证书已生成！您可以右键单击图片保存。</p>`;
             } else {
